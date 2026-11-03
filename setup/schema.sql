@@ -1,6 +1,3 @@
-PRAGMA journal_mode = DELETE;
-PRAGMA foreign_keys = ON;
-
 CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY,
     file_path TEXT NOT NULL UNIQUE,

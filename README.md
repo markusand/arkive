@@ -138,7 +138,7 @@ Configuration backup: `/root/arkive-backups/<timestamp>/configuration.tar`
 
 ## Re-running / updating
 
-The installer is designed to be re-runnable: it redeploys Arkive-owned application/configuration files, preserves uploaded content and the SQLite database, and backs up existing system configuration before applying changes. It prompts again and reapplies the supplied settings. The FTP username is fixed after the first successful installation; the password can be changed on a re-run. Review the prompt summary carefully before confirming.
+The installer is designed to be re-runnable: it redeploys Arkive-owned application/configuration files, preserves uploaded content and the SQLite database, and applies pending versioned database migrations on every run. Existing version-0 databases are recognized as the original schema and baselined without dropping indexed documents. Each migration and its version update run in one SQLite transaction. It also backs up existing system configuration before applying changes. It prompts again and reapplies the supplied settings. The FTP username is fixed after the first successful installation; the password can be changed on a re-run. Review the prompt summary carefully before confirming.
 
 The installer does not automatically remove Debian packages or user/group accounts if a later step fails. It restores backed-up configuration files and leaves the backup archive for recovery.
 
