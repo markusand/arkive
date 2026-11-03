@@ -191,6 +191,7 @@ BACKUP_PATHS=(
     etc/fstab etc/hostname etc/hosts etc/localtime etc/timezone etc/shells
     etc/wpa_supplicant/wpa_supplicant.conf
     etc/network/interfaces etc/network/interfaces.d
+    etc/lighttpd/lighttpd.conf
     etc/lighttpd/conf-enabled/99-arkive.conf
     etc/lighttpd/conf-enabled/10-cgi.conf
     etc/vsftpd.conf
@@ -210,8 +211,21 @@ BACKUP_PATHS=(
     etc/systemd/system/arkive-ap-channel.timer
     etc/systemd/system/arkive-ap.target
 )
-tar --ignore-failed-read -cpf "$BACKUP_DIR/configuration.tar" -C / "${BACKUP_PATHS[@]}" 2>/dev/null || true
-chmod 0600 "$BACKUP_DIR/configuration.tar"
+: > "$BACKUP_DIR/absent-paths.txt"
+EXISTING_BACKUP_PATHS=()
+for backup_path in "${BACKUP_PATHS[@]}"; do
+    if [[ -e "/$backup_path" || -L "/$backup_path" ]]; then
+        EXISTING_BACKUP_PATHS+=("$backup_path")
+    else
+        printf '%s\n' "$backup_path" >> "$BACKUP_DIR/absent-paths.txt"
+    fi
+done
+(( ${#EXISTING_BACKUP_PATHS[@]} > 0 )) || die 'No configuration files were available to back up.'
+tar -cpf "$BACKUP_DIR/configuration.tar" -C / "${EXISTING_BACKUP_PATHS[@]}" ||
+    die 'Could not create the configuration backup; no system changes have been made.'
+tar -tf "$BACKUP_DIR/configuration.tar" >/dev/null ||
+    die 'The configuration backup could not be verified; no system changes have been made.'
+chmod 0600 "$BACKUP_DIR/configuration.tar" "$BACKUP_DIR/absent-paths.txt"
 hostname > "$BACKUP_DIR/hostname.before" 2>/dev/null || true
 SERVICE_UNITS=(
     hostapd.service dnsmasq.service lighttpd.service vsftpd.service
@@ -247,7 +261,13 @@ rollback() {
             /etc/systemd/system/arkive-*.service /etc/systemd/system/arkive-*.timer \
             /etc/systemd/system/arkive-ap.target /etc/systemd/system/arkive-kiwix.service \
             /usr/lib/cgi-bin/arkive-search.sh
-        tar -xpf "$BACKUP_DIR/configuration.tar" -C / 2>/dev/null || true
+        tar -xpf "$BACKUP_DIR/configuration.tar" -C / 2>/dev/null ||
+            log 'WARNING: configuration archive extraction failed; inspect the backup before retrying.'
+        if [[ -f "$BACKUP_DIR/absent-paths.txt" ]]; then
+            while IFS= read -r backup_path; do
+                [[ -n "$backup_path" ]] && rm -rf -- "/$backup_path"
+            done < "$BACKUP_DIR/absent-paths.txt"
+        fi
         if [[ -s "$BACKUP_DIR/hostname.before" ]]; then
             cp "$BACKUP_DIR/hostname.before" /etc/hostname 2>/dev/null || true
             hostname "$(cat "$BACKUP_DIR/hostname.before")" 2>/dev/null || true
@@ -592,7 +612,8 @@ readonly AP_HEALTH_TIMEOUT=180
 
 ap_is_healthy() {
     systemctl is-active --quiet arkive-ap-interface.service || return 1
-    ip -4 addr show dev uap0 2>/dev/null | grep -q 'inet ' || return 1
+    ip -4 -o addr show dev uap0 2>/dev/null |
+        awk '{print $4}' | grep -Fxq "$AP_ADDRESS" || return 1
     systemctl is-active --quiet arkive-hostapd.service || return 1
     systemctl is-active --quiet arkive-dnsmasq.service || return 1
 }
@@ -624,8 +645,19 @@ report_ap_failure() {
 # Do not bounce wlan0 or interrupt an already-running AP during a remote update.
 AP_STATUS='unknown'
 if (( AP_WAS_ACTIVE )); then
-    AP_STATUS='healthy'
-    log 'The Arkive AP is already running; leaving it untouched to avoid disconnecting clients. Newly supplied AP settings take effect after reboot.'
+    if ap_is_healthy; then
+        AP_STATUS='healthy'
+        log 'The Arkive AP is already healthy; leaving it untouched to avoid disconnecting clients.'
+    else
+        log 'The Arkive AP target is active but its services are unhealthy; attempting recovery.'
+        systemctl restart arkive-ap.target || true
+        if wait_for_ap; then
+            AP_STATUS='healthy'
+        else
+            AP_STATUS='failed'
+            report_ap_failure
+        fi
+    fi
 elif iw dev wlan0 link 2>/dev/null | grep -q '^Connected to '; then
     CURRENT_WIFI_SSID=$(iw dev wlan0 link | awk -F': ' '/SSID:/ {print $2; exit}')
     if [[ "$CURRENT_WIFI_SSID" != "$WIFI_SSID" ]]; then
