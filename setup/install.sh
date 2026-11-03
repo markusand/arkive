@@ -191,6 +191,7 @@ BACKUP_PATHS=(
     etc/fstab etc/hostname etc/hosts etc/localtime etc/timezone etc/shells
     etc/wpa_supplicant/wpa_supplicant.conf
     etc/network/interfaces etc/network/interfaces.d
+    etc/lighttpd/lighttpd.conf
     etc/lighttpd/conf-enabled/99-arkive.conf
     etc/lighttpd/conf-enabled/10-cgi.conf
     etc/vsftpd.conf
@@ -592,7 +593,8 @@ readonly AP_HEALTH_TIMEOUT=180
 
 ap_is_healthy() {
     systemctl is-active --quiet arkive-ap-interface.service || return 1
-    ip -4 addr show dev uap0 2>/dev/null | grep -q 'inet ' || return 1
+    ip -4 -o addr show dev uap0 2>/dev/null |
+        awk '{print $4}' | grep -Fxq "$AP_ADDRESS" || return 1
     systemctl is-active --quiet arkive-hostapd.service || return 1
     systemctl is-active --quiet arkive-dnsmasq.service || return 1
 }
@@ -624,8 +626,19 @@ report_ap_failure() {
 # Do not bounce wlan0 or interrupt an already-running AP during a remote update.
 AP_STATUS='unknown'
 if (( AP_WAS_ACTIVE )); then
-    AP_STATUS='healthy'
-    log 'The Arkive AP is already running; leaving it untouched to avoid disconnecting clients. Newly supplied AP settings take effect after reboot.'
+    if ap_is_healthy; then
+        AP_STATUS='healthy'
+        log 'The Arkive AP is already healthy; leaving it untouched to avoid disconnecting clients.'
+    else
+        log 'The Arkive AP target is active but its services are unhealthy; attempting recovery.'
+        systemctl restart arkive-ap.target || true
+        if wait_for_ap; then
+            AP_STATUS='healthy'
+        else
+            AP_STATUS='failed'
+            report_ap_failure
+        fi
+    fi
 elif iw dev wlan0 link 2>/dev/null | grep -q '^Connected to '; then
     CURRENT_WIFI_SSID=$(iw dev wlan0 link | awk -F': ' '/SSID:/ {print $2; exit}')
     if [[ "$CURRENT_WIFI_SSID" != "$WIFI_SSID" ]]; then
