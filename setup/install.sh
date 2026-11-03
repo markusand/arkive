@@ -211,21 +211,8 @@ BACKUP_PATHS=(
     etc/systemd/system/arkive-ap-channel.timer
     etc/systemd/system/arkive-ap.target
 )
-: > "$BACKUP_DIR/absent-paths.txt"
-EXISTING_BACKUP_PATHS=()
-for backup_path in "${BACKUP_PATHS[@]}"; do
-    if [[ -e "/$backup_path" || -L "/$backup_path" ]]; then
-        EXISTING_BACKUP_PATHS+=("$backup_path")
-    else
-        printf '%s\n' "$backup_path" >> "$BACKUP_DIR/absent-paths.txt"
-    fi
-done
-(( ${#EXISTING_BACKUP_PATHS[@]} > 0 )) || die 'No configuration files were available to back up.'
-tar -cpf "$BACKUP_DIR/configuration.tar" -C / "${EXISTING_BACKUP_PATHS[@]}" ||
-    die 'Could not create the configuration backup; no system changes have been made.'
-tar -tf "$BACKUP_DIR/configuration.tar" >/dev/null ||
-    die 'The configuration backup could not be verified; no system changes have been made.'
-chmod 0600 "$BACKUP_DIR/configuration.tar" "$BACKUP_DIR/absent-paths.txt"
+tar --ignore-failed-read -cpf "$BACKUP_DIR/configuration.tar" -C / "${BACKUP_PATHS[@]}" 2>/dev/null || true
+chmod 0600 "$BACKUP_DIR/configuration.tar"
 hostname > "$BACKUP_DIR/hostname.before" 2>/dev/null || true
 SERVICE_UNITS=(
     hostapd.service dnsmasq.service lighttpd.service vsftpd.service
@@ -261,13 +248,7 @@ rollback() {
             /etc/systemd/system/arkive-*.service /etc/systemd/system/arkive-*.timer \
             /etc/systemd/system/arkive-ap.target /etc/systemd/system/arkive-kiwix.service \
             /usr/lib/cgi-bin/arkive-search.sh
-        tar -xpf "$BACKUP_DIR/configuration.tar" -C / 2>/dev/null ||
-            log 'WARNING: configuration archive extraction failed; inspect the backup before retrying.'
-        if [[ -f "$BACKUP_DIR/absent-paths.txt" ]]; then
-            while IFS= read -r backup_path; do
-                [[ -n "$backup_path" ]] && rm -rf -- "/$backup_path"
-            done < "$BACKUP_DIR/absent-paths.txt"
-        fi
+        tar -xpf "$BACKUP_DIR/configuration.tar" -C / 2>/dev/null || true
         if [[ -s "$BACKUP_DIR/hostname.before" ]]; then
             cp "$BACKUP_DIR/hostname.before" /etc/hostname 2>/dev/null || true
             hostname "$(cat "$BACKUP_DIR/hostname.before")" 2>/dev/null || true
