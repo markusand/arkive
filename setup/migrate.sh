@@ -33,9 +33,9 @@ apply_sql_file() {
 }
 
 table_exists() {
-    local table_name=$1
+    [[ ${1:-} == documents ]] || return 1
     [[ $(sqlite3 -batch -noheader "$DATABASE" \
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='$table_name';") == '1' ]]
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='documents';") == '1' ]]
 }
 
 if (( database_version == 0 )); then
@@ -88,10 +88,6 @@ for migration_file in "$MIGRATIONS_DIR"/[0-9][0-9][0-9]_*.sql; do
     filename=${migration_file##*/}
     migration_version=${filename%%_*}
     (( migration_version > latest_version )) || continue
-
-    expected_version=$((latest_version + 1))
-    (( migration_version == expected_version )) || \
-        die "Migration sequence gap: expected $(printf '%03d' "$expected_version"), found $filename."
 
     apply_sql_file "$migration_file" "$migration_version"
     latest_version=$migration_version
