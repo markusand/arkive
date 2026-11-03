@@ -217,10 +217,10 @@ for backup_path in "${BACKUP_PATHS[@]}"; do
     if [[ -e "/$backup_path" || -L "/$backup_path" ]]; then
         EXISTING_BACKUP_PATHS+=("$backup_path")
     else
-        printf '%s\\n' "$backup_path" >> "$BACKUP_DIR/absent-paths.txt"
+        printf '%s\n' "$backup_path" >> "$BACKUP_DIR/absent-paths.txt"
     fi
 done
-(("${#EXISTING_BACKUP_PATHS[@]} > 0)) || die 'No configuration files were available to back up.'
+(( ${#EXISTING_BACKUP_PATHS[@]} > 0 )) || die 'No configuration files were available to back up.'
 tar -cpf "$BACKUP_DIR/configuration.tar" -C / "${EXISTING_BACKUP_PATHS[@]}" ||
     die 'Could not create the configuration backup; no system changes have been made.'
 tar -tf "$BACKUP_DIR/configuration.tar" >/dev/null ||
@@ -658,7 +658,7 @@ if (( AP_WAS_ACTIVE )); then
             report_ap_failure
         fi
     fi
-elif iw dev wlan0 link 2>/dev/null | grep -q '^Connected to ';
+elif iw dev wlan0 link 2>/dev/null | grep -q '^Connected to '; then
     CURRENT_WIFI_SSID=$(iw dev wlan0 link | awk -F': ' '/SSID:/ {print $2; exit}')
     if [[ "$CURRENT_WIFI_SSID" != "$WIFI_SSID" ]]; then
         log "The active wlan0 SSID is '$CURRENT_WIFI_SSID'. The new home Wi-Fi settings are saved and will take effect after reconnect/reboot."
