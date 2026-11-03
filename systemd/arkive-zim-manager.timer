@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodically reconcile uploaded Arkive ZIM files
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=15s
+Unit=arkive-zim-manager.service
+
+[Install]
+WantedBy=timers.target

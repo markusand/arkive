@@ -1,0 +1,7 @@
+[Unit]
+Description=Keep Arkive AP on the home Wi-Fi channel
+After=arkive-ap-interface.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/arkive/sync-ap-channel.sh

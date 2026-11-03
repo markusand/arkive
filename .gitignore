@@ -1,0 +1,15 @@
+.DS_Store
+*.swp
+*.swo
+*.bak
+*.bak.*
+*.zim
+*.pdf
+*.epub
+*.db
+*.sqlite*
+*.env
+*.key
+*.pem
+*.crt
+*.tar.gz

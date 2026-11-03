@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#172b3a" />
+    <title>Arkive Documents</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #f1f5f9;
+        color: #172b3a;
+      }
+
+      header {
+        background: #172b3a;
+        color: white;
+        padding: 48px 24px 64px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: auto;
+      }
+
+      .brand {
+        font-weight: 800;
+        letter-spacing: 3px;
+        color: #7dd3fc;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 6vw, 3.5rem);
+        margin: 32px 0 8px;
+      }
+
+      header p {
+        color: #cbd5e1;
+      }
+
+      main {
+        max-width: 900px;
+        margin: -24px auto 48px;
+        padding: 0 20px;
+      }
+
+      .search-panel {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+
+      .search-controls {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      input,
+      select {
+        min-width: 0;
+        padding: 12px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font: inherit;
+        background: white;
+        color: #172b3a;
+      }
+
+      input {
+        flex: 1;
+      }
+      select {
+        min-width: 130px;
+      }
+
+      input:focus,
+      select:focus {
+        outline: 2px solid #7dd3fc;
+        border-color: #0284c7;
+      }
+
+      .search-hint {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin: 10px 0 0;
+      }
+
+      .results {
+        margin-top: 16px;
+      }
+
+      .result {
+        display: block;
+        padding: 16px 12px;
+        border-bottom: 1px solid #e2e8f0;
+        text-decoration: none;
+        color: inherit;
+        border-radius: 8px;
+      }
+
+      .result:hover {
+        background: #f8fafc;
+      }
+
+      .result-title {
+        font-weight: 700;
+        font-size: 1.05rem;
+      }
+
+      .result-meta {
+        color: #64748b;
+        font-size: 0.8rem;
+        margin: 5px 0 8px;
+      }
+
+      .result-description {
+        font-size: 0.9rem;
+        line-height: 1.5;
+        color: #334155;
+      }
+
+      .result-summary {
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: #64748b;
+        margin-top: 8px;
+      }
+
+      .empty {
+        color: #64748b;
+        font-size: 0.9rem;
+        padding: 16px 0;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      a.card {
+        display: block;
+        padding: 24px;
+        background: white;
+        border-radius: 14px;
+        text-decoration: none;
+        color: inherit;
+        border: 1px solid #e2e8f0;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s;
+      }
+
+      a.card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 24px #172b3a18;
+      }
+
+      .icon {
+        font-size: 2rem;
+      }
+      h2 {
+        margin: 12px 0 6px;
+      }
+      .description {
+        color: #64748b;
+        font-size: 0.95rem;
+      }
+
+      .back {
+        display: inline-block;
+        margin-top: 28px;
+        color: #0369a1;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      footer {
+        text-align: center;
+        color: #64748b;
+        font-size: 0.85rem;
+        padding: 24px;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <div class="brand">ARKIVE / DOCUMENTS</div>
+        <h1>Knowledge, offline. Sure</h1>
+        <p>Manuals, books and reference materials, always within reach.</p>
+      </div>
+    </header>
+
+    <main>
+      <section class="search-panel">
+        <div class="search-controls">
+          <input
+            id="search"
+            type="search"
+            placeholder="Search titles, subjects, authors..."
+            autocomplete="off"
+          />
+
+          <select id="category" aria-label="Filter by category">
+            <option value="">All categories</option>
+            <option value="manuals">Manuals</option>
+            <option value="books">Books</option>
+            <option value="reference">Reference</option>
+          </select>
+
+          <select id="file-type" aria-label="Filter by file type">
+            <option value="">All types</option>
+            <option value="pdf">PDF</option>
+            <option value="txt">TXT</option>
+            <option value="md">Markdown</option>
+          </select>
+        </div>
+
+        <p class="search-hint">
+          Search document titles, authors, descriptions, summaries and keywords.
+        </p>
+
+        <div id="results" class="results" aria-live="polite"></div>
+      </section>
+
+      <div class="grid" id="category-cards">
+        <a class="card" href="?category=manuals">
+          <div class="icon">🛠️</div>
+          <h2>Manuals</h2>
+          <div class="description">
+            Technical manuals, guides and instructions.
+          </div>
+        </a>
+
+        <a class="card" href="?category=books">
+          <div class="icon">📚</div>
+          <h2>Books</h2>
+          <div class="description">Books and long-form reading.</div>
+        </a>
+
+        <a class="card" href="?category=reference">
+          <div class="icon">📄</div>
+          <h2>Reference</h2>
+          <div class="description">
+            Cheat sheets, documents and useful resources.
+          </div>
+        </a>
+      </div>
+
+      <a class="back" href="/">← Back to Arkive Library</a>
+    </main>
+
+    <footer>ARKIVE · Personal offline knowledge server</footer>
+
+    <script>
+      const searchInput = document.querySelector("#search");
+      const categorySelect = document.querySelector("#category");
+      const typeSelect = document.querySelector("#file-type");
+      const results = document.querySelector("#results");
+      const categoryCards = document.querySelector("#category-cards");
+
+      let requestNumber = 0;
+      let debounceTimer;
+
+      const escapeHtml = value =>
+        String(value ?? "").replace(
+          /[&<>"']/g,
+          character =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[character],
+        );
+
+      const updateUrl = () => {
+        const url = new URL(window.location.href);
+
+        const values = {
+          q: searchInput.value.trim(),
+          category: categorySelect.value,
+          type: typeSelect.value,
+        };
+
+        Object.entries(values).forEach(([key, value]) => {
+          if (value) url.searchParams.set(key, value);
+          else url.searchParams.delete(key);
+        });
+
+        window.history.replaceState({}, "", url);
+      };
+
+      const renderResults = async () => {
+        const query = searchInput.value.trim();
+        const category = categorySelect.value;
+        const type = typeSelect.value;
+
+        const active = Boolean(query || category || type);
+
+        categoryCards.hidden = active;
+        results.replaceChildren();
+
+        updateUrl();
+
+        if (!active) return;
+
+        results.innerHTML = '<div class="empty">Searching...</div>';
+
+        const currentRequest = ++requestNumber;
+        const params = new URLSearchParams();
+
+        if (query) params.set("q", query);
+        if (category) params.set("category", category);
+        if (type) params.set("type", type);
+
+        try {
+          const response = await fetch(
+            `/cgi-bin/arkive-search.sh?${params.toString()}`,
+          );
+
+          if (!response.ok) throw new Error("Search request failed");
+
+          const documents = await response.json();
+
+          if (currentRequest !== requestNumber) return;
+
+          if (!Array.isArray(documents)) {
+            throw new Error(documents.error || "Invalid search response");
+          }
+
+          if (documents.length === 0) {
+            results.innerHTML =
+              '<div class="empty">No matching documents found.</div>';
+            return;
+          }
+
+          results.innerHTML = documents
+            .map(document => {
+              const path = `/documents/${document.relative_path.split("/").map(encodeURIComponent).join("/")}`;
+
+              return `
+            <a class="result" href="${escapeHtml(path)}">
+              <div class="result-title">${escapeHtml(document.title)}</div>
+
+              <div class="result-meta">
+                ${escapeHtml(document.category)} ·
+                ${escapeHtml(document.file_type.toUpperCase())}
+                ${document.language && document.language !== "und" ? ` · ${escapeHtml(document.language.toUpperCase())}` : ""}
+                ${document.author ? ` · ${escapeHtml(document.author)}` : ""}
+              </div>
+
+              ${
+                document.description
+                  ? `<div class="result-description">${escapeHtml(document.description)}</div>`
+                  : ""
+              }
+
+              ${
+                document.summary
+                  ? `<div class="result-summary">${escapeHtml(document.summary)}</div>`
+                  : ""
+              }
+            </a>
+          `;
+            })
+            .join("");
+        } catch (error) {
+          if (currentRequest !== requestNumber) return;
+
+          results.innerHTML =
+            '<div class="empty">Unable to search documents. Please try again.</div>';
+
+          console.error(error);
+        }
+      };
+
+      const scheduleSearch = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(renderResults, 250);
+      };
+
+      searchInput.addEventListener("input", scheduleSearch);
+      categorySelect.addEventListener("change", renderResults);
+      typeSelect.addEventListener("change", renderResults);
+
+      // Restore searches from a shared or bookmarked URL.
+      const initialParams = new URLSearchParams(window.location.search);
+
+      searchInput.value = initialParams.get("q") || "";
+
+      if (
+        ["manuals", "books", "reference"].includes(
+          initialParams.get("category"),
+        )
+      ) {
+        categorySelect.value = initialParams.get("category");
+      }
+
+      if (["pdf", "txt", "md"].includes(initialParams.get("type"))) {
+        typeSelect.value = initialParams.get("type");
+      }
+
+      if (searchInput.value || categorySelect.value || typeSelect.value) {
+        renderResults();
+      }
+    </script>
+  </body>
+</html>
