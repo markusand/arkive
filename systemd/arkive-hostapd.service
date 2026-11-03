@@ -1,0 +1,14 @@
+[Unit]
+PartOf=arkive-ap.target
+Description=Arkive Wi-Fi access point
+Requires=arkive-ap-interface.service
+After=arkive-ap-interface.service
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/hostapd /etc/hostapd/arkive.conf
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

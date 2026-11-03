@@ -1,0 +1,10 @@
+[Unit]
+Description=Arkive ZIM library manager
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/srv/arkive/infrastructure/zim-manager.sh
+TimeoutStartSec=0

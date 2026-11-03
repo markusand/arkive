@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodically index Arkive documents
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=15s
+Unit=arkive-indexer.service
+
+[Install]
+WantedBy=timers.target

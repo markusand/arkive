@@ -1,0 +1,18 @@
+[Unit]
+PartOf=arkive-ap.target
+Description=Create Arkive Wi-Fi access point interface
+Wants=networking.service
+After=networking.service wpa_supplicant.service
+Before=arkive-hostapd.service arkive-dnsmasq.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/arkive/ap-interface.sh start
+ExecStop=/usr/local/lib/arkive/ap-interface.sh stop
+TimeoutStartSec=150
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

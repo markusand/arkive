@@ -1,0 +1,11 @@
+[Unit]
+Description=Check home Wi-Fi channel for Arkive AP
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=1min
+AccuracySec=10s
+Unit=arkive-ap-channel.service
+
+[Install]
+WantedBy=timers.target

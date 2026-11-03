@@ -1,0 +1,12 @@
+[Unit]
+Description=Arkive document indexer
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/srv/arkive/infrastructure/indexer.sh
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=0

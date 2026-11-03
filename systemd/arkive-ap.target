@@ -1,0 +1,7 @@
+[Unit]
+Description=Arkive local Wi-Fi access point
+Wants=arkive-ap-interface.service arkive-hostapd.service arkive-dnsmasq.service
+After=arkive-ap-interface.service arkive-hostapd.service arkive-dnsmasq.service
+
+[Install]
+WantedBy=multi-user.target

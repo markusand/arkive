@@ -1,0 +1,23 @@
+[Unit]
+Description=Arkive offline ZIM server
+After=network.target
+ConditionPathExists=/srv/arkive/data/library.xml
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+SupplementaryGroups=arkive-content
+WorkingDirectory=/srv/arkive/data
+ExecStart=/usr/bin/kiwix-serve --library /srv/arkive/data/library.xml --port=8080 --threads=2
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadOnlyPaths=/srv/arkive/data/library.xml /srv/arkive/data/zim
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
