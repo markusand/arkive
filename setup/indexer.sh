@@ -187,12 +187,14 @@ PROMPT
     [[ -n "$generated" ]] || return 1
 
     if ! printf '%s' "$generated" | jq -e '
-        (type == "object") and
-        (.title | type == "string" and length > 0) and
-        (.description | type == "string") and
-        (.summary | type == "string") and
-        (.keywords | type == "array") and
-        (.topics | type == "array")
+        select(
+            (type == "object") and
+            (.title | type == "string" and length > 0) and
+            (.description | type == "string") and
+            (.summary | type == "string") and
+            (.keywords | type == "array") and
+            (.topics | type == "array")
+        )
     ' > "$result_file"; then
         return 1
     fi
