@@ -340,10 +340,12 @@ install -o root -g root -m 0640 "$REPO_ROOT/setup/schema.sql" /srv/arkive/infras
 install -o root -g root -m 0750 "$REPO_ROOT/setup/ap-interface.sh" /usr/local/lib/arkive/ap-interface.sh
 install -o root -g root -m 0750 "$REPO_ROOT/setup/sync-ap-channel.sh" /usr/local/lib/arkive/sync-ap-channel.sh
 
-# Initialize the final database schema directly (no migration chain).
-if [[ ! -f /srv/arkive/data/catalog.db ]]; then
-    sqlite3 -bail /srv/arkive/data/catalog.db < /srv/arkive/infrastructure/schema.sql
-fi
+# Apply pending schema changes on both fresh installs and upgrades.
+log 'Applying database migrations.'
+bash "$REPO_ROOT/setup/migrate.sh" \
+    /srv/arkive/data/catalog.db \
+    "$REPO_ROOT/setup/schema.sql" \
+    "$REPO_ROOT/setup/migrations"
 chown root:www-data /srv/arkive/data/catalog.db
 chmod 0640 /srv/arkive/data/catalog.db
 chown root:www-data /srv/arkive/data

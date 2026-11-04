@@ -6,6 +6,7 @@ ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 for script in \
     "$ROOT/install.sh" \
     "$ROOT/setup/install.sh" \
+    "$ROOT/setup/migrate.sh" \
     "$ROOT/setup/indexer.sh" \
     "$ROOT/setup/zim-manager.sh" \
     "$ROOT/setup/arkive-search.sh" \
@@ -77,6 +78,48 @@ assert connection.execute(
 ).fetchone()[0] == 0
 print('PASS SQLite FTS5 accent matching and insert/update/delete triggers')
 PY
+
+
+MIGRATION_TEST_DIR=$(mktemp -d)
+trap 'rm -rf "$MIGRATION_TEST_DIR"' EXIT
+mkdir -p "$MIGRATION_TEST_DIR/migrations"
+
+FRESH_DATABASE="$MIGRATION_TEST_DIR/fresh.db"
+bash "$ROOT/setup/migrate.sh" "$FRESH_DATABASE" "$ROOT/setup/schema.sql" "$MIGRATION_TEST_DIR/migrations"
+[[ $(sqlite3 -batch -noheader "$FRESH_DATABASE" 'PRAGMA user_version;') == '1' ]]
+
+LEGACY_DATABASE="$MIGRATION_TEST_DIR/legacy.db"
+sqlite3 -bail "$LEGACY_DATABASE" < "$ROOT/setup/schema.sql"
+sqlite3 -bail "$LEGACY_DATABASE" <<'SQL'
+INSERT INTO documents(file_path,file_name,file_type,category,title,file_size,modified_at,indexed_at)
+VALUES('/docs/preserved.pdf','preserved.pdf','pdf','reference','Preserved document',12,10,10);
+SQL
+bash "$ROOT/setup/migrate.sh" "$LEGACY_DATABASE" "$ROOT/setup/schema.sql" "$MIGRATION_TEST_DIR/migrations"
+[[ $(sqlite3 -batch -noheader "$LEGACY_DATABASE" 'PRAGMA user_version;') == '1' ]]
+[[ $(sqlite3 -batch -noheader "$LEGACY_DATABASE" 'SELECT COUNT(*) FROM documents WHERE file_path="/docs/preserved.pdf";') == '1' ]]
+
+cat > "$MIGRATION_TEST_DIR/migrations/002_add_source_checksum.sql" <<'SQL'
+ALTER TABLE documents ADD COLUMN source_checksum TEXT;
+SQL
+bash "$ROOT/setup/migrate.sh" "$FRESH_DATABASE" "$ROOT/setup/schema.sql" "$MIGRATION_TEST_DIR/migrations"
+[[ $(sqlite3 -batch -noheader "$FRESH_DATABASE" 'PRAGMA user_version;') == '2' ]]
+[[ $(sqlite3 -batch -noheader "$FRESH_DATABASE" "SELECT COUNT(*) FROM pragma_table_info('documents') WHERE name='source_checksum';") == '1' ]]
+
+# Re-running the same installer must not reapply an already recorded migration.
+bash "$ROOT/setup/migrate.sh" "$FRESH_DATABASE" "$ROOT/setup/schema.sql" "$MIGRATION_TEST_DIR/migrations"
+[[ $(sqlite3 -batch -noheader "$FRESH_DATABASE" 'PRAGMA user_version;') == '2' ]]
+
+cat > "$MIGRATION_TEST_DIR/migrations/003_forced_failure.sql" <<'SQL'
+CREATE TABLE migration_rollback_probe(id INTEGER);
+INSERT INTO table_that_does_not_exist VALUES(1);
+SQL
+if bash "$ROOT/setup/migrate.sh" "$FRESH_DATABASE" "$ROOT/setup/schema.sql" "$MIGRATION_TEST_DIR/migrations" >/dev/null 2>&1; then
+    echo 'FAIL a broken migration unexpectedly succeeded.' >&2
+    exit 1
+fi
+[[ $(sqlite3 -batch -noheader "$FRESH_DATABASE" 'PRAGMA user_version;') == '2' ]]
+[[ $(sqlite3 -batch -noheader "$FRESH_DATABASE" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='migration_rollback_probe';") == '0' ]]
+printf 'PASS versioned SQLite migrations, legacy database preservation, idempotency and rollback\n'
 
 # systemd-analyze verify also checks ExecStart paths on the current host; those paths
 # are intentionally installed only on the target Pi, so unit validation is done there.
