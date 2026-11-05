@@ -120,6 +120,7 @@ local_metadata() {
 gemini_enrich() {
     local text_file=$1 local_result=$2 result_file=$3
     local request_file="$TEMP_DIR/request.json" response_file="$TEMP_DIR/response.json" curl_config="$TEMP_DIR/curl.conf"
+    local candidate="$TEMP_DIR/candidate.json" merged="$TEMP_DIR/merged.json"
     local prompt generated
 
     [[ -n "$GEMINI_API_KEY" ]] || return 1
@@ -195,14 +196,16 @@ PROMPT
             (.keywords | type == "array") and
             (.topics | type == "array")
         )
-    ' > "$result_file"; then
+    ' > "$candidate"; then
         return 1
     fi
 
     # Keep local PDF metadata when the model omits it.
-    jq -s '.[0] * (.[1] | with_entries(select(.value != null and .value != "")))' \
-        "$local_result" "$result_file" > "$result_file.merged"
-    mv "$result_file.merged" "$result_file"
+    if ! jq -s '.[0] * (.[1] | with_entries(select(.value != null and .value != "")))' \
+        "$local_result" "$candidate" > "$merged"; then
+        return 1
+    fi
+    mv "$merged" "$result_file"
 }
 
 file_is_already_indexed() {
